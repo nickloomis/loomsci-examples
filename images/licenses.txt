@@ -1,0 +1,23 @@
+The images in this directory are from various sources: personal collections,
+contributed by friends, and from the internet. Any images here are distributed
+here for educational purposes only, with no license for commercial use or
+for re-distribution (unless noted otherwise). Please respect the original
+copyright owners and do not use the images without permission.
+
+The intent behind including source data in this repository is for users to
+be able to exactly reproduce the examples posted to loomsci.wordpress.com --
+providing transparency into the codes which are released in this repo.
+
+If you add images to the directory, please fill in the relevant details about
+image name, author, source, and license.
+
+
+Image metadata
+======================================
+
+image: oaklandlw-zinnias.JPG
+author: oaklandlw
+author e-mail:
+source: oaklandlw instagram feed
+downloaded: 2015-08-22
+license: for educational purposes only; no commercial use; no redistribution; no re-use without attribution
