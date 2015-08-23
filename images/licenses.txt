@@ -18,6 +18,6 @@ Image metadata
 image: oaklandlw-zinnias.JPG
 author: oaklandlw
 author e-mail:
-source: oaklandlw instagram feed
+source: https://instagram.com/oaklandlw/
 downloaded: 2015-08-22
 license: for educational purposes only; no commercial use; no redistribution; no re-use without attribution
