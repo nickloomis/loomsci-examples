@@ -21,3 +21,10 @@ author e-mail:
 source: https://instagram.com/oaklandlw/
 downloaded: 2015-08-22
 license: for educational purposes only; no commercial use; no redistribution; no re-use without attribution
+
+image: chicago-small.png
+author: Nick Loomis
+author e-mail: nloomis@gmail.com
+source: personal photo; downsampled from original
+downloaded: n/a
+license: for educational purposes; no commercial use; no redistribution; no re-use without attribution
