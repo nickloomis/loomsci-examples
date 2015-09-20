@@ -35,6 +35,9 @@ function HT = halftone_using_dict(image, dict, method, varargin)
 %  ht = halftone_using_dict(my_img, dict); %use luminance matching to
 %                                          %halftone my_img
 %
+% See also:
+%  halftone_using_dict_fast, halftone_dict
+%
 % Change log:
 %  2015/09/05 -- original version written; nloomis@
 %  2015/09/10 -- modified for NxN halftones, additional args; nloomis@

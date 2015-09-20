@@ -28,3 +28,10 @@ author e-mail: nloomis@gmail.com
 source: personal photo; downsampled from original
 downloaded: n/a
 license: for educational purposes; no commercial use; no redistribution; no re-use without attribution
+
+image: butterfly.jpg
+author: Nick Loomis
+author e-mail: nloomis@gmail.com
+source: personal photo; cropped and downsampled from original
+downloaded: n/a
+license: for educational purposes; no commercial use; no redistribution; no re-use without attribution

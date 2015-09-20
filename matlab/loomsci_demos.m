@@ -12,6 +12,7 @@ function loomsci_demos(demo_name)
 %  land illusion stripes : Land's illusion, using stripes
 %  land illusion : Land's illusion using overlapping projections
 %  diagonal halftone : halftoning using a dictionary of diagonal wedges
+%  fast halftone : halftoning using a look-up table
 %
 % Change log:
 %  2015/09/04 -- started demo function with diagonal_pixellation; nloomis@
@@ -19,12 +20,14 @@ function loomsci_demos(demo_name)
 %                short_name() and validatestring() for parsing the input 
 %                string; added land's illusion demos; nloomis@
 %  2015/09/06 -- added diagonalhalftone; nloomis@
+%  2015/09/14 -- added fasthalftone; nloomis@
 
 known_demos = {'diagonalpixellation', ...
     'diagonalpixellationcolor', ...
     'landillusionstripes', ...
     'landillusion', ...
-    'diagonalhalftone'};
+    'diagonalhalftone', ...
+    'fasthalftone'};
 valid_short = validatestring(short_name(demo_name), known_demos);
 
 switch valid_short
@@ -75,6 +78,15 @@ switch valid_short
         ht3 = cat(3, htr, htg, htb);
         myimagesc(ht3);
         title('Demo: halftoning in a linear color space');
+    
+    case 'fasthalftone'
+        src = fullfile(repo_base(), '..', 'images', 'chicago-small.png');
+        t = imread(src);
+        blocks = make_diagonal_blocks(16);
+        dict = make_halftone_dict(blocks);
+        ht = halftone_using_dict_fast(t, dict);
+        myimagesc(ht);
+        title('Demo: fast halftoning in a linear color space');
         
     otherwise
         error('loomsci_demos:DemoExNameNotKnown', ...
