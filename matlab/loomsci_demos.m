@@ -21,6 +21,7 @@ function loomsci_demos(demo_name)
 %                string; added land's illusion demos; nloomis@
 %  2015/09/06 -- added diagonalhalftone; nloomis@
 %  2015/09/14 -- added fasthalftone; nloomis@
+%  2015/09/28 -- converted to use test_image() for loading; nloomis@
 
 known_demos = {'diagonalpixellation', ...
     'diagonalpixellationcolor', ...
@@ -32,16 +33,14 @@ valid_short = validatestring(short_name(demo_name), known_demos);
 
 switch valid_short
     case 'diagonalpixellation'
-        src = fullfile(repo_base(), '..', 'images', 'chicago-small.png');
-        t = imread(src);
+        t = test_image('chicago');
         T_diag = diagonal_pixellation(t, 8, 40, 16);
         myimagesc(T_diag);
         colormap gray
         title('Demo: diagonal pixellation');
         
     case 'diagonalpixellationcolor'
-        src = fullfile(repo_base(), '..', 'images', 'chicago-small.png');
-        t = imread(src);
+        t = test_image('chicago');
         diag_img = cell(1,3);
         for ch = 1:3
             diag_img{ch} = diagonal_pixellation(t(:,:,ch), 8, 40, 16);
@@ -51,8 +50,7 @@ switch valid_short
         title('Demo: diagonal pixellation, color');
     
     case 'landillusionstripes'
-        src = fullfile(repo_base(), '..', 'images', 'chicago-small.png');
-        t = imread(src);
+        t = test_image('chicago');
         T = land_illusion_stripes(t);
         myimagesc(T);
         title('Demo: Land''s illusion using stripes')
@@ -61,15 +59,13 @@ switch valid_short
         end
     
     case 'landillusion'
-        src = fullfile(repo_base(), '..', 'images', 'chicago-small.png');
-        t = imread(src);
+        t = test_image('chicago');
         T = land_illusion(t);
         myimagesc(T);
         title('Demo: Land''s illusion (original)')
 
     case 'diagonalhalftone'
-        src = fullfile(repo_base(), '..', 'images', 'chicago-small.png');
-        t = imread(src);
+        t = test_image('chicago');
         blocks = make_diagonal_blocks(16);
         dict = make_halftone_dict(blocks);
         htr = halftone_using_dict(t(:, :, 1), dict);
@@ -80,8 +76,7 @@ switch valid_short
         title('Demo: halftoning in a linear color space');
     
     case 'fasthalftone'
-        src = fullfile(repo_base(), '..', 'images', 'chicago-small.png');
-        t = imread(src);
+        t = test_image('chicago');
         blocks = make_diagonal_blocks(16);
         dict = make_halftone_dict(blocks);
         ht = halftone_using_dict_fast(t, dict);
