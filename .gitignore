@@ -1,0 +1,5 @@
+#compiled python
+*.pyc
+
+#auto-saves from matlab
+*.asv

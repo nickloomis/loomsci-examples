@@ -9,3 +9,6 @@ where to source the modules. Specifically, notes of the form
   "apt-get install some-package-name"
 refer to Ubuntu's package manager and its naming scheme for the packages which
 contain the module.
+
+Recurring packages:
+import cv2 -- both cv and cv2 are part of opencv.
