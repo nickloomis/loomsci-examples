@@ -89,32 +89,32 @@ def test_image(image_name=None):
 
 def flip_channels(img):
     """Flips the order of channels in an image; eg, BGR <-> RGB.
-    
+
     This function assumes the image is a numpy.array (what's returned by cv2
     function calls) and uses the numpy re-ordering methods. The number of
     channels does not matter.
     """
-    return img[:,:,::-1]    
+    return img[:,:,::-1]
 
 def cat3(*channels):
     """Concatenate channels in the supplied order.
-    
+
     Convenience function."""
     #numpy.dstack() is 40% faster than cv2.merge()
     return numpy.dstack(channels)
 
 def split2(img):
     """Splits a 2-channel image into its constituent channels.
-    
+
     Convenience function using numpy slices, ~300x faster than cv2.split()."""
     assert(isinstance(img, numpy.ndarray))
     assert(nchannels(img) == 2)
     return img[:, :, 0], img[:, :, 1]
     #TODO: split into column vectors if a 2D array
-    
+
 def split3(img):
     """Splits a 3-channel image into its constituent channels.
-    
+
     Convenience function using numpy slices, ~300x faster than cv2.split()."""
     assert(isinstance(img, numpy.ndarray))
     assert(nchannels(img) == 3)
@@ -137,16 +137,16 @@ def datatype(img):
     """The type of the data used in the image: img.dtype."""
     assert(isinstance(img, numpy.ndarray))
     return img.dtype
-    
+
 def float2uint8(img):
     """Converts a float array to a uint8 type.
-    
+
     The float values are expected to be in the range [0..1]. uint8 values are
     returned in the range [0..255]."""
     assert(isinstance(img, numpy.ndarray))
     #TODO: img.view() may be faster, but isn't giving the right conversions?
     return numpy.rint(img * 255).astype('uint8')
-    
+
 #
 # display
 #

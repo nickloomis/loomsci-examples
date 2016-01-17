@@ -7,6 +7,8 @@ Change log:
   2010/10/10 -- copied generic tools out to imageutils.py, so that only the
                 code specific to cv2 is in this module; nloomis@
 """
+__authors__ = {'nloomis@gmail.com'}
+
 #stdlib imports
 import os.path
 
@@ -25,8 +27,11 @@ def imread(filename, read_mode=cv2.IMREAD_COLOR):
     read-in settings if the original method doesn't work.
     read_mode defaults to cv2.IMREAD_COLOR; can also take cv2.IMREAD_GRAYSCALE
     or cv2.IMREAD_UNCHANGED.
+
+    NB: OpenCV reads images into memory as BGR, the opposite of numpy and
+    matlab. Use flip_channels or flip_channels_cv2 to convert the channels to
+    RGB order instead.
     """
-    #thought: should we auto-convert BGR->RGB for color images?
     read_modes = [cv2.IMREAD_COLOR, cv2.IMREAD_GRAYSCALE, cv2.IMREAD_UNCHANGED]
     assert (read_mode in read_modes)
     if not os.path.exists(filename):
@@ -50,3 +55,4 @@ def flip_channels_cv2(img):
     faster and is independent on the number of channels.
     """
     return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
