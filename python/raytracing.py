@@ -7,7 +7,11 @@ Change log:
   2015/09/20 -- copied out geometric objects to raytracinggeometry.py, math
                 utilities to utilmath.py, and geometric optics functions to
                 geometricoptics.py; nloomis@
+  2016/01/16 -- Ray updated to have property setters, which makes it easier to
+                specify the position and direction using simple lists, ie, 
+                ray.position = [0, 1, 2]; nloomis@
 """
+__authors__ = ('nloomis@gmail.com',)
 
 import copy
 import numpy
@@ -20,19 +24,34 @@ import utilmath as umath
 #
 
 class Ray(object):
-    def __init__(self, point, direction,
+    def __init__(self, point=[0, 0, 0], direction=[0, 0, 1],
                  wavelength=1, intensity=1, payload=None, is_active=True):
         """Defines a ray based on a reference point and a direction.
 
         Additional descriptors, like wavelength, amplitude, or a specific
         payload can be added.
         """
-        self.point = umath.nparray(self.point)
-        self.direction = umath.norm_vec(umath.nparray(direction))
+        self.point = point
+        self.direction = direction
         self.wavelength = wavelength
         self.intensity = intensity
         self.payload = payload
-        self.is_active = is_active
+
+    @property
+    def point(self):
+        return self._point
+    
+    @point.setter
+    def point(self, value):
+        self._point = umath.nparray(value)
+
+    @property
+    def direction(self):
+        return self._direction
+    
+    @direction.setter
+    def direction(self, value):
+        self._direction = umath.norm_vec(umath.nparray(value))
 
     def propagate(self, distance):
         """Propagates forward by a distance along the ray direction."""
@@ -42,7 +61,6 @@ class Ray(object):
         """Propagates forward until the ray intersects the plane."""
         dist = plane.ray_intersect_dist(self)
         self.propagate(dist)
-
 
 
 #class TracedRays(object):
