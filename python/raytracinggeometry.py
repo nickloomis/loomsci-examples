@@ -3,22 +3,25 @@ Geometric objects, and how to trace rays through those objects.
 
 Change log:
   2015/09/20 -- copied out of raytracing.py for clarity; nloomis@gmail.com
+  2016/01/17 -- removed spurious ellipsoid definition; fixed bugs; added a
+                conic object; nloomis@
 """
+__authors__ = ('nloomis@gmail.com',)
 
 import numpy
 import utilmath as umath
 
 
 #constants
-npzero = numpy.zeros((1,3)) #row vector; 3 zeros
+npzero = numpy.zeros((1, 3)) #row vector; 3 zeros
 
 
-def Plane(object):
+class Plane(object):
     def __init__(self, point, normal):
         self.point = umath.nparray(point)
         self.normal = umath.norm_vec(umath.nparray(normal))
 
-    def ray_intersect_dist(self, ray):
+    def RayIntersectDist(self, ray):
         """Returns the distance along the ray where it hits the plane."""
         #https://en.wikipedia.org/wiki/Line%E2%80%93plane_intersection
         ldotn = numpy.dot(ray.direction, self.normal)
@@ -30,127 +33,66 @@ def Plane(object):
         num = numpy.dot(self.point - ray.point, self.normal)
         return num / ldotn
 
-class Ellipsoid(object):
-    
-    def __init__(self, foci1, foci2, focal_parameter=1, 
-                 n_inside=1.5, n_outside=1.0):
-        self.foci1 = foci1
-        self.foci2 = foci2
-        self.focal_parameter = focal_parameter
-        self.n_inside = n_inside
-        self.n_outside = n_outside
-        self._s2e_matrix = None #placeholder; None to designate it needs to
-        #be calculated later
-        
-    def is_inside(self, point):
-        self.check_set_s2e()
-        #TODO: finish this.
-
-    def is_on(self, point):
-        self.check_set_s2e()
-        #TODO: finish this.
-    
-    def _s2e_transform(self):
-        """Computes the sphere-to-ellipsoid transform matrix."""
-        #TODO: where does this matrix come from?
-        #fortunately... don't need to compute this often.
-        a = self.semimajor
-        b = self.semiminor
-        #stretch a sphere into an ellipsoid along the axes
-        mat_stretch = numpy.diag([a, b, b, 1])
-        e1 = umath.norm_vec(self.foci_diff)
-        e2 = umath.norm_vec([1, -1, 0] * e1[1,0,2]) #st dot(e1, e2) = 0
-        e3 = umath.norm_vec(numpy.corr(e1, e2)) #st dot(e1, e3)=0 and dot(e2, e3)=0
-        mat_rotate = numpy.zeros((4,4))        
-        mat_rotate[0:3, 0:3] = numpy.vstack((e1, e2, e3)).T
-        mat_rotate[3, 3] = 1.0
-        #shift the ellipsoid
-        mat_shift = numpy.eye(4)
-        mat_shift[0:3, 3] = self.center
-        #combine the matrices
-        return numpy.dot(mat_shift, numpy.dot(mat_rotate, mat_stretch))
-
-    @property
-    def foci1(self):
-        return self._foci1
-        
-    @foci1.setter
-    def foci1(self, value):
-        self._foci1 = umath.nparray(value)
-        self._s2e_matrix = None #this will invalidate the transform matrix
-    
-    @property
-    def foci2(self):
-        return self._foci2
-
-    @foci2.setter
-    def foci2(self, value):
-        self._foci2 = umath.nparray(value)
-        self._s2e_matrix = None #this will invalidate the transform matrix
-
-    @property
-    def center(self):
-        return 0.5 * (self._foci1 + self._foci2)
-
-    @property
-    def foci_diff(self):
-        return self.foci1 - self.foci2
-
-    @property
-    def semimajor(self):
-        c = numpy.sqrt(sum(self.foci_diff**2))
-        return numpy.sqrt(self.focal_parameter * c + c**2)
-    
-    @property
-    def semiminor(self):
-        c = numpy.sqrt(sum(self.foci_diff**2))
-        return numpy.sqrt(self.semimajor - c**2)
-
-    @property
-    def s2e_matrix(self):
-        if (not self._s2e_matrix) and self.foci1 and self.foci2:
-            self._s2e_matrix = self._s2e_transform()
-            self.s2e_inverse = numpy.linalg.inv(self.s2e_matrix)
-            #TODO: need better reporting mechanism if s2e_matrix is singular.
-            #TOOD: do we actually need the inverse?
-            return self._s2e_matrix
-    
-#    pass
-#    define the shape using some transforms on a sphere
-#    build intersection codes to find where rays hit
-        #thought: a sphere is a special case of an ellipsoid. is it then better
-        #for the sphere to inherit from the ellipsoid?
-
-
-class Sphere(Ellipsoid):
-    """Defines a spherical surface."""
-    def __init__(self, center=npzero, radius=1, nsphere=1.5, noutside=1.0):
-        self.center = umath.nparray(center)
+class Conic(object):
+    """Rotationally-symmetric conic shape: ellipsoid, paraboloid, hyperboloid.
+    (Spheres are special cases of ellipsoids.)
+    The z-axis is the axis of symmetry. The radius uses the optical sign
+    convention to determine opening direction.
+    """
+    def __init__(self, radius=1, conic=0, vertex=npzero):
         self.radius = radius
-        self.n_sphere = nsphere
-        self.n_outside = noutside
+        self.conic = conic
+        self.vertex = vertex
 
-#TODO: copy these over to the Ellipsoid class, include the transform and its
-#inverse.
-#    def is_inside(self, point):
-#        """Test for whether the point is inside the sphere."""
-#        return norm(point - self.center) < self.radius
+    @property
+    def vertex(self):
+        return self._vertex
 
-#    def is_on(self, point):
-#        """Test for whether the point is on the surface of the sphere."""
-#        #TODO: give this a threshold
-#        return norm(point - self.center) == self.radius
+    @vertex.setter
+    def vertex(self, value):
+        self._vertex = umath.nparray(value)
 
- #   def ray_intersect_dist(self, ray):
- #       """Returns the distance along the ray where it first hits the sphere."""
- #       #https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection
- #       oc = ray.point - self.center
- #       ldotoc = numpy.dot(ray.direction, oc)
- #       det = ldotoc**2 - norm(oc) + self.radius**2
- #       if det < 0:
- #           return None
- #       det_root = numpy.sqrt(det)
- #       #find the first intersection along the positive direction of the ray
- #       return min_positive([-ldotoc + det_root, -ldotoc - det_root])
+    def RayIntersectDist(self, ray):
+        """The distance along the ray to the first intersection with the conic.
 
-    #TODO: def drawing function to show the object
+        If the distance is a complex number, it indicates that the ray does
+        not intersect the conic; the real part gives the closest approach.
+        Only positive distances are returned (ie, only distances in the same
+        direction of the ray).
+        """
+        t1, t2 = umath.quadratic_solution(*self._IntersectQuadraticTerms(ray))
+        return umath.min_positive([t1, t2], 1e-12)
+
+    def _IntersectQuadraticTerms(self, ray):
+        """Returns the coeffs of a quadratic for a ray-object intersect.
+
+        Uses Murphy's 'Simple Three-D Raytrace Algorithm'. The coefficients are
+        passed to a quadratic solver to find the intersection distances, up
+        to two for a conic.
+        """
+        #shift the ray's point by sutracting the vertex location of the conic
+        ray_point = ray.point - self._vertex
+        A = ray.direction[0]**2 + ray.direction[1]**2 + \
+            (self.conic + 1.) * ray.direction[2]**2
+        B = 2. * ray_point[0] * ray.direction[0] + \
+            2. * ray_point[1] * ray.direction[1] + \
+            2. * (self.conic + 1.) *ray_point[2] * ray.direction[2] - \
+            2. * self.radius * ray.direction[2]
+        C = ray_point[0]**2 + ray_point[1]**2 + \
+            (self.conic + 1.) * ray_point[2]**2 - 2.*self.radius * ray_point[2]
+        return A, B, C
+
+    def Sag(self, x, y):
+        """Calculates the sag at the specific radial point (x,y).
+
+        The vertex position is used to shift the conic as needed. The returned
+        sag is then the distance from the xy plane to the conic at the specified
+        point.
+        """
+        xv = x - self._vertex[0]
+        yv = y - self._vertex[1]
+        rho2 = xv**2 + yv**2
+        c = 1. / self.radius
+        conic_sag = c * rho2 / \
+          (1 + numpy.sqrt(1 - (1 + self.conic) * c**2 * rho2))
+        return conic_sag + self._vertex[2]
