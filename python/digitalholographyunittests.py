@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Oct 31 20:04:15 2015
+Unit tests for digitalholography.py.
 
-@author: nloomis
+Change log:
+  2015/10/31: unit tests started; nloomis@gmail.com
+  2016/01/18: fixed error in test_du_dv where the wrong variable was checked;
+              small formatting changes; nloomis@
 """
+__authors__ = ('nloomis@gmail.com',)
+
+import digitalholography as dhi
+import imageutils
 
 import numpy
 import os.path
 import unittest
-
-import digitalholography as dhi
-import imageutils
 
 class HologramTest(unittest.TestCase):
     """Tests for Hologram() objects which don't require data to be loaded."""
@@ -35,8 +39,8 @@ class HologramTest(unittest.TestCase):
         self.assertEqual(10e-3, self.holo.dy)
         
     def test_du_dv(self):
-        self.assertEqual(50., self.holo.du)
-        self.assertEqual(50., self.holo.dv)
+        self.assertEqual(50., self.holo.u_max)
+        self.assertEqual(50., self.holo.v_max)
 
 
 class HologramTestLoad(unittest.TestCase):
