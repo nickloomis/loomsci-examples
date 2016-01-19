@@ -1,21 +1,19 @@
 """
 Module to work with digital holography.
 
-CHange log:
+Change log:
   2015/10/24 -- module started; nloomis@gmail.com
+  2016/01/18 -- minor formatting fixes; nloomis@gmail.com
 """
-__authors__ = {"nloomis@gmail.com"}
-
-#props
-#wavelength, pixel size
-#total field of view, max freq, delta-freq, nyquist limit
-
-import numpy
-import matplotlib.pyplot as plt
+__authors__ = ("nloomis@gmail.com",)
 
 import cv2utils
 import cv2color
 import imageutils
+
+import numpy
+import matplotlib.pyplot as plt
+
 
 class Hologram(object):
     def __init__(self, wavelength=0.500e-3, pixel_size=0.010):
@@ -62,7 +60,7 @@ class Hologram(object):
 
     def _set_nx_ny_from_data(self):
         """Sets the sample counts using shape information in the data array."""
-        if not self._data:
+        if not self._data is None:
             self.ny = self.data.shape[0]
             self.nx = self.data.shape[1]
 
