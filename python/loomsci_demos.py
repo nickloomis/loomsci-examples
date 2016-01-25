@@ -35,6 +35,17 @@ def demo_digitalholography():
     holo.load('../images/godzillaholo.bmp')
     holo.show_intensity(54) #z = [50, 54, 58, 108]
 
+def demo_steerablederiv():
+    """Display the kernel of a steerable derivative filter."""
+    import imageutils
+    S = imageutils.steerable_deriv(sigma=14.1, n_pix=61)
+    imageutils.imshow(S)
+    imageutils.plt.xlabel('x pixel')
+    imageutils.plt.ylabel('y pixel')
+    imageutils.plt.title('Steerable derivative; sigma = 14.1, 61 pixels')
+    imageutils.plt.colorbar()
+    imageutils.plt.show()
+
 #
 # functions to run different demos
 #

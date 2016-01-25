@@ -8,14 +8,15 @@ Change log:
   2015/10/07 -- repo_dir, image_dir, dir_by_ext, test_image written;
                 nloomis@gmail.com
   2015/10/10 -- added channel management methods; nloomis@
+  2016/01/24 -- added __authors__ variable; fixed order of imports; nloomis@
 """
+__authors__ = ('nloomis@gmail.com',)
+
+import cv2utils
 
 import matplotlib.pyplot as plt
 import numpy
 import os
-
-import cv2utils
-
 
 #
 # file handling
@@ -93,7 +94,11 @@ def flip_channels(img):
     This function assumes the image is a numpy.array (what's returned by cv2
     function calls) and uses the numpy re-ordering methods. The number of
     channels does not matter.
+    If the image array is strictly 2D, no re-ordering is possible and the
+    original data is returned untouched.
     """
+    if len(img.shape) == 2:
+        return img;
     return img[:,:,::-1]
 
 def cat3(*channels):
@@ -163,3 +168,35 @@ def imshow(img, figure_name='image'):
 #def mydisp(img, clim)
 #see plt.imshow() for helpful args; vmin and vmax for min/max values, norm for
 #normalizing the values; check for int vs float, though!
+
+
+#
+# filters
+#
+
+def steerable_deriv(n_pix=None, sigma=1.5):
+    """Builds a steerable Gaussian derivative filter in the x direction.
+    
+    Transpose the output array to get the filter in the y direction.
+    Based on 'Design and use of steerable filters', Freeman and Adelson, PAMI, 
+    1991.
+    Inputs:
+      n_pix: number of pixels in each side of the output filter. if n_pix is
+             not specified, it defaults to 3*sigma. n_pix can be even or odd.
+      sigma: amount of smoothing used for the filter; for a wider filter and
+             more smoothing, use a large sigma. the sigma value is approximately
+             the half-width of the filter in pixels. experiment with different
+             values between 1 and 10 for most image processing applications.
+             if sigma is not specified, it defaults to 1.5.
+    Returns:
+      a numpy array of size (n_pix x n_pix) with the weights of the x-direction
+      steerable derivative filter.
+
+    """
+    if not n_pix:
+        n_pix = int(numpy.ceil(3 * sigma))
+    x = numpy.linspace(-n_pix / 2., n_pix / 2., int(n_pix))
+    X, Y = numpy.meshgrid(x, x)
+    norm_factor = sigma**2 * n_pix**2
+    S = -2. * X * numpy.exp(-(X**2 + Y**2) / sigma**2) / norm_factor
+    return S
