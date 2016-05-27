@@ -11,7 +11,8 @@ refer to Ubuntu's package manager and its naming scheme for the packages which
 contain the module.
 
 Recurring packages:
-import cv2 -- both cv and cv2 are part of opencv.
+import cv2 -- both cv and cv2 are installed as part of opencv, use
+  apt-get install opencv
 
 Style Guide
 =================

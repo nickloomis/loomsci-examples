@@ -4,6 +4,7 @@ Module to work with digital holography.
 Change log:
   2015/10/24 -- module started; nloomis@gmail.com
   2016/01/18 -- minor formatting fixes; nloomis@gmail.com
+  2016/05/25 -- documentation work; nloomis@gmail.com
 """
 __authors__ = ("nloomis@gmail.com",)
 
@@ -17,25 +18,43 @@ import matplotlib.pyplot as plt
 
 class Hologram(object):
     def __init__(self, wavelength=0.500e-3, pixel_size=0.010):
-        #data about the physics
+        # Values related to the physics.
+        # _data holds the raw hologram data, if it has been loaded.
         self._data = None
         self.wavelength = wavelength
         self._pixel_size = pixel_size
 
-        #internal data
+        # Internal state.
+        # nx, ny are the number of samples in the x and y directions.
         self._nx = None
         self._ny = None
-        self.fft = None #fft of the source data
-        self._freq_R2 = None #U^2 + V^2, freq domain grid
+        # fft holds the fast Fourier transform of the source _data.
+        self.fft = None
+        # _freq_R2 = U^2 + V^2, a variable which is used repeatedly when
+        # calculating a diffraction kernel.
+        self._freq_R2 = None
+
+        # Reset all variables related to reconstruction
         self._reset_reconstruction()
 
     def _reset_reconstruction(self):
         """Resets reconstruction variables."""
+        # field is the reconstructed optical field.
         self.field = None
         self._set_z(None)
 
     def load(self, data):
-        """Loads data into the hologram object -- an array or file."""
+        """Loads data into a Hologram object.
+
+        The data can either be a numpy array already in memory or a filename
+        to read from disk using opencv.
+
+        If the data is a numpy array, it is assumed to be floating point and
+        single channel.
+
+        If the data is a string, it is treated as a file on disk. The file is
+        read into an array, converted to grayscale if it is 3-channel, and 
+        divided by 255 to convert to floating point."""
         if isinstance(data, basestring):
             img = cv2utils.imread(data)
             if imageutils.nchannels(img) == 3:
@@ -49,6 +68,7 @@ class Hologram(object):
 
     @property
     def data(self):
+        """Returns the source data as a floating-point numpy array."""
         return self._data
 
     @data.setter
@@ -66,6 +86,7 @@ class Hologram(object):
 
     @property
     def pixel_size(self):
+        """Returns the physical size of a pixel."""
         return self._pixel_size
 
     @pixel_size.setter
@@ -136,7 +157,13 @@ class Hologram(object):
 
     @property
     def k(self):
-        """Returns the wavenumber."""
+        """Returns the wavenumber.
+
+        The wavenumber is defined as
+
+          k = 2 * pi / wavelength,
+
+        and is in units of inverse length."""
         return 2.0 * numpy.pi / self.wavelength
 
     @property
@@ -149,7 +176,12 @@ class Hologram(object):
         self._z = z_dist
 
     def reconstruct(self, z):
-        """Reconstruct the field at a specific propagation distance."""
+        """Reconstruct the optical field at a specific propagation distance.
+
+        The field is returned after the computation completes. The field is also
+        accessible from Hologram.field.
+
+        The field is, in general, a complex-valued array."""
         if self.data is None:
             raise ValueError("No data to reconstruct.")
         if self.fft is None:
@@ -158,16 +190,22 @@ class Hologram(object):
         self.holokern(z)
         self.field = numpy.fft.ifft2(self.fft * self.kernel)
         self._set_z(z)
+        return self.field
 
     def _make_frequency_grids(self):
-        """Constructs u and v grids in the Fourier domain."""
+        """Constructs u and v grids in the Fourier domain.
+
+        u is the x-direction spatial frequency, while v is the y-direction
+        spatial frequency."""
         u = numpy.fft.fftfreq(self.nx, self.pixel_size)
         v = numpy.fft.fftfreq(self.ny, self.pixel_size)
         self._freq_U, self._freq_V = numpy.meshgrid(u, v)
         self._freq_R2 = self._freq_U ** 2.0 + self._freq_V ** 2.0
 
     def holokern(self, z):
-        """Construct the propagation kernel."""
+        """Construct the propagation kernel for a specific depth.
+
+        The kernel is stored to Hologram.kernel."""
         if self._freq_R2 is None:
             self._make_frequency_grids()
         a = numpy.pi * self.wavelength * z
@@ -175,25 +213,52 @@ class Hologram(object):
         #TODO: check speed of cos, sin, exp(i) methods
 
     def holokern_cs(self, z):
-        """Construct the propagation kernel; alternate cosine+sine version."""
+        """Construct the propagation kernel; alternate cosine+sine version.
+
+        The kernel is stored to Hologram.kernel. The only difference between
+        holokern() and holokern_cs() is that this version uses the Euler
+        identity to avoid a complex exponential. It is intended primarily for
+        comparing the speed of the two implementations."""
         if self._freq_R2 is None:
             self._make_frequency_grids()
         R2 = self._freq_R2 * numpy.pi * self.wavelength * z
         self.kernel = numpy.cos(R2) + 1j * numpy.sin(R2)
 
     def plot_intensity(self):
-        """Plots the intensity of a reconstructed field; convenience."""
+        """Plots the intensity of a reconstructed field.
+
+        The field, F, is complex-valued. Its intensity, I,  is 
+
+          I = F * conj(F)
+            = abs(F) ^2 
+
+        This is a convenience function to compute the intensity and display
+        the field graphically. Use plt.show() to display the plot window."""
         if not self._is_ready_to_show():
             return
         plt.imshow(numpy.abs(self.field)**2.0)
         plt.title('Intensity; z = %f' % self._z)
 
     def plot_field(self):
-        """Adds the reconstruction field compoents to pyplot subplots.
+        """Plots reconstructed field components in different subplots.
 
-        plot_field() is the low-level function to add the fields to different
-        subplots. This makes it easy to change the titles or colormapping
-        before displaying the plots.
+        plot_field() is a low-level function which plots field components in
+        different subplots. The titles, colormapping, or plots themselves can
+        be modified before displaying the plots.
+
+        The subplots are arranged as:
+
+        +--------------------+---------------------+
+        |                    |                     |
+        |     intensity      |         angle       |
+        |     (2, 2, 1)      |       (2, 2, 2)     |
+        |                    |                     |
+        |--------------------+---------------------+
+        |                    |                     |
+        |     real part      |     imaginary part  |
+        |     (2, 2, 3)      |       (2, 2, 4)     |
+        |                    |                     |
+        +--------------------+---------------------+
         """
         plt.subplot(2, 2, 1)
         self.plot_intensity()
@@ -214,7 +279,7 @@ class Hologram(object):
         attempted just before checking for the field's existence.
         """
         if z is not None:
-            self.reconstruct(z)
+            _ = self.reconstruct(z)
         if self.field is None:
             print "No field has been reconstructed."
             return False
@@ -241,3 +306,26 @@ class Hologram(object):
             return
         self.plot_intensity()
         plt.show()
+
+    def aliasing_pixel(self, z):
+        """Pixel where aliasing of a kernel occurs.
+
+        The kernel is a chirp function with linearly increasing frequency. At
+        some point, the frequency of the kernel surpasses the Nyquist
+        frequency of the discretely-sampled hologram. This function returns
+        the pixel at which the kernel meets the Nyquist frequency.
+
+        The data should be filtered to only include values below the aliasing
+        frequency if aliasing is to be avoided entirely.
+
+        Generalized sampling decribes the additional high-frequency data which
+        can be derived from non-filtered, aliased reconstructions (where the
+        aliasing is actually used in conjunction with sample aliasing to 
+        recover high frequencies).
+
+        The returned value is the floating-point sample where aliasing occurs,
+        taking the zero-frequency pixel to be pixel[0, 0] in the Fourier
+        domain. Round or floor the value to get the integer pixel to use as a
+        Nyquist cut-off, or use the value as a float to construct a mask."""
+        df = 1. / (self.nx * self.pixel_size)
+        return 1. / (2 * self.wavelength * z * df ** 2)
