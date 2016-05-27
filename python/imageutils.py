@@ -17,6 +17,13 @@ import cv2utils
 import matplotlib.pyplot as plt
 import numpy
 import os
+import scipy.ndimage
+#try:
+#    from skimage import filters
+#except ImportError:
+#    # handles the case where skimage is v0.10 (the filter module was renamed
+#    # to filters in v0.11)
+#    from skimage import filter as filters
 
 #
 # file handling
@@ -200,3 +207,57 @@ def steerable_deriv(n_pix=None, sigma=1.5):
     norm_factor = sigma**2 * n_pix**2
     S = -2. * X * numpy.exp(-(X**2 + Y**2) / sigma**2) / norm_factor
     return S
+
+def apply_gradient_filter(img, x_dir_filter):
+    """Applies the gradient filter in two orthogonal directions.
+
+    Inputs:
+      img: image that filters should be applied onto
+      x_dir_filter: a filter which, which convolved with the image, returns the
+        gradients in the x direction. the filter is transposed for use in the
+        y direction. it should be a numpy array, and can have up to the same
+        number of channels as the image.
+    Returns:
+      tuple of (S, O, gx, gy), with
+       S: magnitude of the gradient
+       O: orientation of the gradient in radians
+       gx: x-direction raw gradient data
+       gy: y-direction raw gradient data
+    """
+    gradient_x = scipy.ndimage.filters.convolve(img, x_dir_filter)
+    gradient_y = scipy.ndimage.filters.convolve(img, x_dir_filter.transpose())
+    S = numpy.sqrt(gradient_x**2 + gradient_y**2)
+    O = numpy.atan2(gradient_y, gradient_x)
+    return S, O, gradient_x, gradient_y
+
+def local_mean_filter(img, structuring_element):
+    """Returns the local average of an image.
+
+    The structuring element is a mask which determines the shape of the local
+    area. The structuring element is a 2D numpy array with 0's outside the
+    local are and 1's inside the mask. (Alternately, any other weighting value
+    can be used within the mask region.)
+    Hint: skimage.morphology has a number of pre-defined structuring elements.
+    """
+    se_shape = structuring_element.shape
+    # TODO(nloomis): need to reshape or replicate so that the image and the filter
+    # have the same number of channels!
+    #...duh, use .ndim for dimensions...
+    if structuring_element.ndim != img.ndim:
+        pass #TODO: be smart about matching the dims!
+#        structuring_element.reshape((se_shape[0], se_shape[1], 1))
+    mean_filter = structuring_element / float(structuring_element.sum())
+    return scipy.ndimage.filters.convolve(img, mean_filter)
+
+def stdfilt(img, structuring_element):
+    """Returns the local standard deviation of an image.
+
+    The structuring element is a mask which determines the shape of the local
+    area; see the documentation for local_mean_filter for details. The standard
+    deviation is calculated within the local area."""
+    local_sq = local_mean_filter(img**2, structuring_element)
+    local_mean = local_mean_filter(img, structuring_element)
+    return numpy.sqrt(local_sq - local_mean**2)
+
+# TODO(nloomis): check on correlate vs convolve (arguments, and which makes
+#                sense)
