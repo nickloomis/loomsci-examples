@@ -1,4 +1,5 @@
-"""Simple focus detection methods for use with holograms.
+"""
+Simple focus detection methods for use with holograms.
 
 Change log:
   2016/01/24 -- module started; nloomis@gmail.com
@@ -49,7 +50,7 @@ def LaplaceMetric(self, field, opts):
   return scipy.ndimage.laplace(numpy.abs(field))
 
 def RobersMetric(self, field, unused_opts):
-  return filters.robers(numpy.abs(field))
+  return filters.roberts(numpy.abs(field))
 
 def EntropyMetric(self, field, opts):
   #TODO: use the options?
@@ -65,8 +66,6 @@ def SteerableDerivativeMetric(self, field, opts):
   S, _, _, _ = imageutils.apply_gradient_filter(numpy.abs(field,
                                                 steerable_filter))
   return S
-
-
 
 def FocusStack(holo, z_position_list, focus_function, options=None):
   """Builds a stack of focus data through a hologram volume.

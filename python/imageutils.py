@@ -181,6 +181,14 @@ def imshow(img, figure_name='image'):
 # filters
 #
 
+def imfilter():
+    """Filters an image using a kernel."""
+    pass
+    # TODO(nloomis): make sure that the number of channels in the image and
+    # the kernel match! May need to repmat the filter. If the filter has too
+    # many channels or can't be repmat'd without uncertainty about what is
+    # happening, throw an error.
+
 def steerable_deriv(n_pix=None, sigma=1.5):
     """Builds a steerable Gaussian derivative filter in the x direction.
     
