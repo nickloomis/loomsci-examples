@@ -234,10 +234,14 @@ def PresentValue(future_amount, interest_rate, periods):
 
   interest rate: as a value (ie, 0.002 is the value for 2% per period)
   periods: total number of interest payments which will be made
+
+  For more, see https://en.wikipedia.org/wiki/Present_value
   """
-  # TODO(nloomis): links to wikipedia articles
   return future_amount / (1.0 + interest_rate)**periods
 
-  # TODO(nloomis): also consider the savings you'd get by reducing your AGI each
-  # year, given some guesses about the tax brackets. That analysis  might be a
-  # good part of Schedule().
+# TODO(nloomis): also consider the savings you'd get by reducing your AGI each
+# year, given some guesses about the tax brackets. That analysis  might be a
+# good part of Schedule().
+# For example: if you're in the 25% tax bracket, your net taxes are reduced by
+# about 25% of the amount you pay in interest. That means that you're only
+# "losing" 75% of the interest in the end.
