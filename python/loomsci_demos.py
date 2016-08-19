@@ -46,6 +46,11 @@ def demo_steerablederiv():
     imageutils.plt.colorbar()
     imageutils.plt.show()
 
+def demo_ledecky_wr():
+    """Fit and plot Katie Ledecky's world record swim times."""
+    import ledecky_wr
+    ledecky_wr.Fit()
+
 #
 # functions to run different demos
 #
