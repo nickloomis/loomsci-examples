@@ -18,6 +18,7 @@ Change log:
 """
 __authors__ = ('nloomis@gmail.com',)
 
+from collections import namedtuple
 import numpy
 
 class Mortgage(object):
@@ -53,6 +54,9 @@ class Mortgage(object):
     annuity_rate = self.rate * exponential / (exponential - 1)
     return annuity_rate * self.principal
 
+  MonthlySnapshot = namedtuple("MonthlySnapshot", ["month", "interest",
+      "principal_paid", "principal"])
+
   def Schedule(self, verbose=False, additional_payments=None):
     """Determines the effect of additional payments on the principle.
 
@@ -81,6 +85,9 @@ class Mortgage(object):
     Set verbose=True to print the schedule and related information to the
     console.
     """
+    # TODO(nloomis): update docs, returns for history[]! Also, don't need to
+    # explicitly return the time, t, if the entire schedule is returned.
+    
     # Make the additional payments vector at least as long as the expected
     # number of payments. NB: be careful if you're using negative numbers in the
     # additional_payments vector (for example, to represent a missed payment):
@@ -110,6 +117,10 @@ class Mortgage(object):
     total_interest = 0;
     # Reset the current time.
     t = 0
+ 
+    # Create a container to hold monthly snapshots of the payments.
+    history = []
+
     # Calculate the interest and remaining principle each month until the
     # mortgage is paid off. The loan is repaid once the initial principle at
     # the start of each month goes below one cent.
@@ -126,7 +137,11 @@ class Mortgage(object):
       overpayment = principal_reduction - init_principal[t]
       # Keep track of the principal still due at the start of the next payment
       # period.
-      init_principal.append(max(init_principal[t] - principal_reduction, 0))
+      principal_remaining = max(init_principal[t] - principal_reduction, 0)
+      init_principal.append(principal_remaining)
+
+      history.append(self.MonthlySnapshot(t, interest_amount, principal_reduction,
+          principal_remaining))
 
       # print the schedule
       if verbose:
@@ -143,7 +158,7 @@ class Mortgage(object):
 
     # Return the time period when the last payment occurred and the overpayment
     # on the mortgage during the final period.
-    return t, overpayment
+    return t, overpayment, history
 
   def OverpaymentPresentValue(self, amount, payment_period, apr):
     """Finds the value of over-paying a mortgage during one repayment period.
@@ -232,7 +247,7 @@ class Mortgage(object):
 def PresentValue(future_amount, interest_rate, periods):
   """Returns the present value of some future value.
 
-  interest rate: as a value (ie, 0.002 is the value for 2% per period)
+  interest rate: as a value (ie, 0.02 is the value for 2% per period)
   periods: total number of interest payments which will be made
 
   For more, see https://en.wikipedia.org/wiki/Present_value
