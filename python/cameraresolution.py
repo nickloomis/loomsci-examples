@@ -6,6 +6,7 @@ printed photos which are limited in their detail by the human visual system.
 Change log:
   2016/09/24 -- module started; nloomis@gmail.com
   2016/09/27 -- documentation added; nloomis@gmail.com
+  2016/10/08 -- plotting of camera pixels vs viewing distance added; nloomis@
 """
 __authors__ = ('nloomis@gmail.com')
 
@@ -61,5 +62,20 @@ def CameraSbpFromRatios(aspect_ratio, viewing_distance_ratio):
 
   The raw number of camera pixels is returned. Divide by 1024**2 to convert to
   megapixels."""
-  denom = viewing_distance_ratio**2.0 * (1 + aspect_ratio**2.0) * tand(1./60)
+  denom = viewing_distance_ratio**2.0 * \
+         (1 + aspect_ratio**2.0) * \
+         tand(1./60)**2.0
   return 4.0 * aspect_ratio / denom
+
+def PlotCameraSbpVsK():
+  """Plots the camera SBP as a function of the viewing distance multiplier, k"""
+  import matplotlib.pyplot as plt
+  sbp_at_unity = CameraSbpFromRatios(4/3., 1.0);
+  k = numpy.linspace(1, 1.8, 100)
+  sbp = sbp_at_unity / k**2.0 / 1024**2
+  plt.plot(k, sbp)
+  plt.xlabel('viewing distance multiplier, k')
+  plt.ylabel('camera MPx')
+  plt.title('Camera pixels vs viewing distance')
+  plt.grid('on')
+  plt.show()
