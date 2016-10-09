@@ -18,6 +18,8 @@ needs to be documented within the code itself.
 Change log:
   2015 -- module started; nloomis@gmail.com
   2016/01/18 -- self-inspection added to find demo_* functions; nloomis@
+  2016/??    -- digitalholography, steerablederiv, ledecky_wr added; nloomis@
+  2016/10/08 -- camera MPx demo added; nloomis@
 """
 __authors__ = ('nloomis@gmail.com',)
 
@@ -50,6 +52,11 @@ def demo_ledecky_wr():
     """Fit and plot Katie Ledecky's world record swim times."""
     import ledecky_wr
     ledecky_wr.Fit()
+
+def demo_camera_sbp():
+    """Plot the number of MPx for a camera to achieve max visual acuity."""
+    import cameraresolution
+    cameraresolution.PlotCameraSbpVsK()
 
 #
 # functions to run different demos
