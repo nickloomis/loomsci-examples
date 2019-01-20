@@ -260,3 +260,9 @@ def PresentValue(future_amount, interest_rate, periods):
 # For example: if you're in the 25% tax bracket, your net taxes are reduced by
 # about 25% of the amount you pay in interest. That means that you're only
 # "losing" 75% of the interest in the end.
+
+def PresentValueAnnuity(payment, interest_rate, periods):
+  """Foo!"""
+  a = (1. - (1. + interest_rate)**(-periods)) / interest_rate
+  return payment * a
+  

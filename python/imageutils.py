@@ -9,9 +9,11 @@ Change log:
                 nloomis@gmail.com
   2015/10/10 -- added channel management methods; nloomis@
   2016/01/24 -- added __authors__ variable; fixed order of imports; nloomis@
+  2017/02/05 -- added image resize/scaling functions; nloomis@
 """
 __authors__ = ('nloomis@gmail.com',)
 
+import cv2
 import cv2utils
 
 import matplotlib.pyplot as plt
@@ -176,6 +178,48 @@ def imshow(img, figure_name='image'):
 #see plt.imshow() for helpful args; vmin and vmax for min/max values, norm for
 #normalizing the values; check for int vs float, though!
 
+#
+# resize
+#
+
+def scale_to_width(image, width_pixels):
+    """Rescales an image so that its width has the specified pixel count."""
+    image_size = image.shape
+    scale_factor = float(width_pixels) / image_size[1]
+    target_height = round(scale_factor * image_size[0])
+    target_size = (int(target_height), int(width_pixels))
+    interp_method = scaling_interpolation_method(image_size, target_size)
+    return cv2.resize(image, target_size, interpolation=interp_method)
+
+def scale_to_height(image, height_pixels):
+    """Rescales an image so that its height has the specified pixel count."""
+    image_size = image.shape
+    scale_factor = float(height_pixels) / image_size[0]
+    target_width = round(scale_factor * image_size[1])
+    target_size = (int(target_width), int(height_pixels))
+    interp_method = scaling_interpolation_method(image_size, target_size)
+    return cv2.resize(image, target_size, interpolation=interp_method)
+
+def scale_to_min_size(image, min_pixels):
+    """Rescale image so that its minimum dimension is a given pixel count."""
+    image_size = image.shape
+    if image_size[0] < image_size[1]:
+        # The height is the smaller of the two dimensions.
+        return scale_to_height(image, min_pixels)
+    return scale_to_width(image, min_pixels)
+
+def scaling_interpolation_method(original_size, destination_size):
+    """Returns a preferred high-quality interpolation method for resizing.
+
+    The preferred method depends on whether the image is decreasing in size or
+    expanding in size.
+    """
+    height_scale = float(destination_size[0]) / original_size[0]
+    width_scale = float(destination_size[1]) / original_size[1]
+    mean_scale = 0.5 * (height_scale + width_scale)
+    if mean_scale <= 1:
+        return cv2.INTER_AREA
+    return cv2.INTER_CUBIC
 
 #
 # filters
