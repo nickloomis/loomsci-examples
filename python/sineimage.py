@@ -37,18 +37,23 @@ class Plotter(object):
     num_rows, width = reshaped_image.shape
     y_centers = self._strip_center_y()
     x = np.linspace(0, width - 1, width)
-    omega = 0.5   # spatial frequency
-    intensity_image = self._fast_gamma(reshaped_image)
+    omega = 0.65   # spatial frequency
+    # intensity_image = self._fast_gamma(reshaped_image)
+    intensity_image = reshaped_image  # when amplitude ~intensity, this "version" looks better
     for i in range(num_rows):
       amplitude = self.strip_height * 0.5 * intensity_image[i, :] / 255
       plt.plot(x, amplitude * np.sin(omega * x) + y_centers[i], color='black')
-    plt.box(False)
+    plt.axis('off')
+    plt.gca().invert_yaxis()  # like axis(ij)
     plt.show()
+    # to save out, don't show the plot. also, may need to resize it? or use linewidth=...
+#    plt.savefig("foo.png", bbox_inches='tight', dpi=200)
 
-# TODO(nloomis): flipud on graph
 # TODO(nloomis): option to scale to max intensity
 # TODO(nloomis): save out image
 # TODO(nloomis): options for diff't color scheme
 # TODO(nloomis): modify the frequency, either as an option or f(intensity) or f(image detail)
 # TODO(nloomis): option to set low_res_width using a different scale -- eg,
 #                preserve more lateral detail
+# TODO(nloomis): amplitude so that sine's coverage has about the right intensity on average over the region
+# TODO(nloomis): options for RGB plots, with phase offsets in the sines between each color
