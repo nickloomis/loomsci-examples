@@ -37,7 +37,7 @@ class Plotter(object):
     num_rows, width = reshaped_image.shape
     y_centers = self._strip_center_y()
     x = np.linspace(0, width - 1, width)
-    omega = 0.5
+    omega = 0.5   # spatial frequency
     intensity_image = self._fast_gamma(reshaped_image)
     for i in range(num_rows):
       amplitude = self.strip_height * 0.5 * intensity_image[i, :] / 255
@@ -49,3 +49,6 @@ class Plotter(object):
 # TODO(nloomis): option to scale to max intensity
 # TODO(nloomis): save out image
 # TODO(nloomis): options for diff't color scheme
+# TODO(nloomis): modify the frequency, either as an option or f(intensity) or f(image detail)
+# TODO(nloomis): option to set low_res_width using a different scale -- eg,
+#                preserve more lateral detail
