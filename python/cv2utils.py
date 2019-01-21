@@ -42,7 +42,7 @@ def imread(filename, read_mode=cv2.IMREAD_COLOR):
             raise IOError('Image %s could not be read in.' % filename)
         else:
             #try reading again, but with the most permissible settings
-            print 'Re-trying a read using cv2.IMREAD_UNCHANGED...'
+            print('Re-trying a read using cv2.IMREAD_UNCHANGED...')
             img = imread(filename, cv2.IMREAD_UNCHANGED)
     return img
 
