@@ -9,6 +9,7 @@ __authors__ = ('nloomis@gmail.com',)
 import cv2
 import cv2utils
 import matplotlib.pyplot as plt
+import matplotlib.colors as mp_color
 import numpy as np
 import scipy.special as special
 
@@ -50,6 +51,23 @@ class Plotter(object):
     # to save out, don't show the plot. also, may need to resize it? or use linewidth=...
 #    plt.savefig("foo.png", bbox_inches='tight', dpi=200)
 
+  def draw_opencv(self):
+    reshaped_image = self._reshape_source()
+    num_rows, width = reshaped_image.shape
+    y_centers = self._strip_center_y()
+    x = np.linspace(0, width - 1, width)
+    omega = 0.65   # spatial frequency
+    # intensity_image = self._fast_gamma(reshaped_image)
+    intensity_image = reshaped_image  # when amplitude ~intensity, this "version" looks better
+    sine_image = np.zeros((self.source_height, self.source_width), dtype='uint8')
+    for i in range(num_rows):
+      amplitude = self.strip_height * 0.5 * intensity_image[i, :] / 255
+      y = amplitude * np.sin(omega * x) + y_centers[i]
+      sine_image = plot_to_opencv(sine_image, x, y, 255, 1)
+    # TODO(nloomis): save out image
+    plt.imshow(sine_image, cmap='Greys_r')
+    plt.show()
+
 # TODO(nloomis): option to scale to max intensity
 # TODO(nloomis): save out image
 # TODO(nloomis): options for diff't color scheme
@@ -59,7 +77,7 @@ class Plotter(object):
 # TODO(nloomis): amplitude so that sine's coverage has about the right intensity on average over the region
 # TODO(nloomis): options for RGB plots, with phase offsets in the sines between each color
 # TODO(nloomis): options for line width
-# TODO(nloomis): 
+# TODO(nloomis): draw using higher resolution, downsample for better anti-aliasing
 
 def sine_arc_length(a, omega):
   """
@@ -83,3 +101,8 @@ def region_darkness(a, omega, a_max):
   width = 2 * np.pi / omega
   area = width * (2 * a_max)
   return sine_arc_length(a, omega) / area
+
+def plot_to_opencv(img, x, y, color, linewidth):
+  cv_points = [np.int32(np.vstack((x, y)).T)]
+  cv2.polylines(img, cv_points, False, color, int(linewidth), cv2.LINE_AA)
+  return img
