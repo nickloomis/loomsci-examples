@@ -10,6 +10,7 @@ import cv2
 import cv2utils
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy.special as special
 
 class Plotter(object):
   def __init__(self, filename, num_strips):
@@ -57,3 +58,28 @@ class Plotter(object):
 #                preserve more lateral detail
 # TODO(nloomis): amplitude so that sine's coverage has about the right intensity on average over the region
 # TODO(nloomis): options for RGB plots, with phase offsets in the sines between each color
+# TODO(nloomis): options for line width
+# TODO(nloomis): 
+
+def sine_arc_length(a, omega):
+  """
+  Length of a*sin(omega * x) from x = 0 to x = 2*pi/omega (one cycle)
+
+  From Wolfram Alpha:
+    int sqrt(1+a^2*w^2*(cos(w*x))^2) from x=0 to x=2pi/w
+  """
+  a2w2 = a * a * omega * omega
+  first_e_term = special.ellipe(-a2w2)  # complete elliptic integral 2nd kind
+  second_e_term = special.ellipe(1 - 1/(a2w2 + 1))
+  return 2 * (first_e_term + np.sqrt(a2w2 + 1) * second_e_term) / omega
+
+def region_darkness(a, omega, a_max):
+  """
+  The 'darkness' or 'brightness' of a region is proportional to the ratio of
+  pixels covered by a plotted line to the total area of the region. This
+  function assumes that the number of pixels covered by the line is
+  proportional to the arc length of the line.
+  """
+  width = 2 * np.pi / omega
+  area = width * (2 * a_max)
+  return sine_arc_length(a, omega) / area
