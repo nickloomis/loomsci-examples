@@ -2,7 +2,8 @@
 TODO(nloomis): describe package
 
 Change log:
-  2019/01/19 -- module started; nloomis@gmailcom
+  2019/01/19 -- module started; nloomis@gmail.com
+  2019/01/27 -- opencv amplitude-intensity lookup finished; nloomis@gmail.com
 """
 __authors__ = ('nloomis@gmail.com',)
 
@@ -19,6 +20,7 @@ class Plotter(object):
     self.source_height, self.source_width = self.source_image.shape
     self.num_strips = int(num_strips)
     self.strip_height = self.source_height / self.num_strips
+    self.frequency = 0.65 # spatial frequency of sine; fixed for now
 
   def _reshape_source(self):
     scale = float(self.num_strips) / self.source_height
@@ -31,20 +33,25 @@ class Plotter(object):
     return np.linspace(0.5 * self.strip_height, (self.num_strips - 0.5) * self.strip_height, self.num_strips)
 
   @classmethod
-  def _fast_gamma(cls, reshaped_image):
-    return np.power(reshaped_image / 255, 2.2) * 255
+  def _fast_gamma(cls, image):
+    """
+    Fast estimate for the linear intensity corresponding to a sRGB value. The
+    actual sRGB->linRGB inverse companding should be used if better accuracy is
+    required; a gamma of 2.2 is an average.
+    The input image is in [0, 255]. The output intensity map is [0, 1].
+    """
+    return np.power(image / 255, 2.2)
 
   def draw(self):
     reshaped_image = self._reshape_source()
     num_rows, width = reshaped_image.shape
     y_centers = self._strip_center_y()
     x = np.linspace(0, width - 1, width)
-    omega = 0.65   # spatial frequency
-    # intensity_image = self._fast_gamma(reshaped_image)
-    intensity_image = reshaped_image  # when amplitude ~intensity, this "version" looks better
+    #intensity_image = self._fast_gamma(reshaped_image)
+    intensity_image = reshaped_image / 255 # when amplitude ~intensity, this "version" looks better
     for i in range(num_rows):
-      amplitude = self.strip_height * 0.5 * intensity_image[i, :] / 255
-      plt.plot(x, amplitude * np.sin(omega * x) + y_centers[i], color='black')
+      amplitude = self.strip_height * 0.5 * intensity_image[i, :]
+      plt.plot(x, amplitude * np.sin(self.frequency * x) + y_centers[i], color='black')
     plt.axis('off')
     plt.gca().invert_yaxis()  # like axis(ij)
     plt.show()
@@ -56,51 +63,60 @@ class Plotter(object):
     num_rows, width = reshaped_image.shape
     y_centers = self._strip_center_y()
     x = np.linspace(0, width - 1, width)
-    omega = 0.65   # spatial frequency
-    # intensity_image = self._fast_gamma(reshaped_image)
-    intensity_image = reshaped_image  # when amplitude ~intensity, this "version" looks better
+    intensity_image = self._fast_gamma(reshaped_image)
+    map_builder = SineToIntensityMapBuilder(self.strip_height, self.frequency)
+    map_size = np.floor(0.5 * self.strip_height)
+    linewidth = 1
+    amplitude_map, intensity_map = map_builder.map(map_size, linewidth)
+    scaled_intensity_image = intensity_image * np.max(intensity_map)
+    amplitude_image = np.reshape(np.interp(np.ravel(scaled_intensity_image), intensity_map, amplitude_map), intensity_image.shape)
     sine_image = np.zeros((self.source_height, self.source_width), dtype='uint8')
     for i in range(num_rows):
-      amplitude = self.strip_height * 0.5 * intensity_image[i, :] / 255
-      y = amplitude * np.sin(omega * x) + y_centers[i]
-      sine_image = plot_to_opencv(sine_image, x, y, 255, 1)
-    # TODO(nloomis): save out image
+      y = amplitude_image[i, :] * np.sin(self.frequency * x) + y_centers[i]
+      sine_image = plot_to_opencv(sine_image, x, y, 255, linewidth)
     plt.imshow(sine_image, cmap='Greys_r')
     plt.show()
+    return sine_image
 
-# TODO(nloomis): option to scale to max intensity
-# TODO(nloomis): save out image
-# TODO(nloomis): options for diff't color scheme
+class SineToIntensityMapBuilder(object):
+  def __init__(self, strip_height, frequency):
+    self.strip_height = strip_height
+    self.max_amplitude = 0.5 * self.strip_height
+    self.omega = frequency
+    self.period = 2 * np.pi / frequency
+
+  def map(self, num_levels, linewidth):
+    """
+    Creates a map of amplitude vs intensity.
+    """
+    num_cycles = 5  # number of cycles to plot (to limit edge effects)
+    bkg = np.zeros((int(self.strip_height), round(self.period * num_cycles)), dtype='uint8')
+    # The intensity (linear RGB) is scaled to [0, 1] for this module. The
+    # maximum intensity occurs when all pixels in the intenstiy map of the
+    # plotted image have a value of 1.
+    max_total_intensity = bkg.shape[0] * bkg.shape[1]
+    amplitudes = np.linspace(0, self.max_amplitude, num_levels)
+    width = bkg.shape[1]
+    x = np.linspace(0, width - 1, width)
+    intensity = np.zeros(amplitudes.shape)
+    for i, a in enumerate(amplitudes):
+      y = self.strip_height * 0.5 + a * np.sin(self.omega * x)
+      plotted_image = plot_to_opencv(bkg, x, y, 255, linewidth)
+      intensity_image = Plotter._fast_gamma(plotted_image)
+      intensity[i] = np.sum(intensity_image[:]) / max_total_intensity
+    return amplitudes, intensity
+
+# TODO(nloomis): options for diff't color scheme (dark on bright, bright on dark)
 # TODO(nloomis): modify the frequency, either as an option or f(intensity) or f(image detail)
+# TODO(nloomis): scale the frequency as a function of the image size; some fixed
+#                number of cycles across the image, for example
 # TODO(nloomis): option to set low_res_width using a different scale -- eg,
 #                preserve more lateral detail
 # TODO(nloomis): amplitude so that sine's coverage has about the right intensity on average over the region
 # TODO(nloomis): options for RGB plots, with phase offsets in the sines between each color
 # TODO(nloomis): options for line width
-# TODO(nloomis): draw using higher resolution, downsample for better anti-aliasing
-
-def sine_arc_length(a, omega):
-  """
-  Length of a*sin(omega * x) from x = 0 to x = 2*pi/omega (one cycle)
-
-  From Wolfram Alpha:
-    int sqrt(1+a^2*w^2*(cos(w*x))^2) from x=0 to x=2pi/w
-  """
-  a2w2 = a * a * omega * omega
-  first_e_term = special.ellipe(-a2w2)  # complete elliptic integral 2nd kind
-  second_e_term = special.ellipe(1 - 1/(a2w2 + 1))
-  return 2 * (first_e_term + np.sqrt(a2w2 + 1) * second_e_term) / omega
-
-def region_darkness(a, omega, a_max):
-  """
-  The 'darkness' or 'brightness' of a region is proportional to the ratio of
-  pixels covered by a plotted line to the total area of the region. This
-  function assumes that the number of pixels covered by the line is
-  proportional to the arc length of the line.
-  """
-  width = 2 * np.pi / omega
-  area = width * (2 * a_max)
-  return sine_arc_length(a, omega) / area
+# TODO(nloomis): limit the maximum amplitude to be some fraction of the strip height
+#                for a better appearance
 
 def plot_to_opencv(img, x, y, color, linewidth):
   cv_points = [np.int32(np.vstack((x, y)).T)]
