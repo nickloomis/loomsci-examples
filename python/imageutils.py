@@ -75,22 +75,22 @@ def test_image(image_name=None):
     test_image_dir = image_dir()
     available_images = dir_by_ext(image_dir(), IMAGE_EXT)
     if image_name is None:
-        print 'Available images are: %s' % available_images
+        print('Available images are: %s' % available_images)
         return None
     #find the matching image names
     assert(isinstance(image_name, basestring))
     matches = [file_name for file_name in available_images
                if file_name.startswith(image_name)]
     if len(matches) == 0:
-        print 'No name match found for %s.' % image_name
+        print('No name match found for %s.' % image_name)
         return None
     elif len(matches) > 1:
-        print 'Multiple matches found for %s: %s.' % (image_name, matches)
+        print('Multiple matches found for %s: %s.' % (image_name, matches))
         return None
     else:
         #load the matching image
         filename = os.path.join(test_image_dir, matches[0])
-        print 'loading: %s' % filename
+        print('loading: %s' % filename)
         return cv2utils.imread(filename)
 
 #

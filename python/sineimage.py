@@ -9,18 +9,25 @@ __authors__ = ('nloomis@gmail.com',)
 
 import cv2
 import cv2utils
+import imageutils
 import matplotlib.pyplot as plt
 import matplotlib.colors as mp_color
 import numpy as np
 import scipy.special as special
 
 class Plotter(object):
-  def __init__(self, filename, num_strips):
-    self.source_image = cv2utils.imread(filename, cv2.IMREAD_GRAYSCALE)
-    self.source_height, self.source_width = self.source_image.shape
+  def __init__(self, source_image, num_strips):
+    #self.source_image = cv2utils.imread(filename, cv2.IMREAD_GRAYSCALE)
+    # TODO(nloomis): hide internal variables
+    self.source_image = source_image
+    self.source_height, self.source_width = self.source_image.shape[:2]
+    self.num_channels = imageutils.nchannels(self.source_image)
     self.num_strips = int(num_strips)
     self.strip_height = self.source_height / self.num_strips
     self.frequency = 0.65 # spatial frequency of sine; fixed for now
+    lut_builder = SineIntensityLutBuilder(self.strip_height, self.frequency)
+    self.linewidth = 1
+    self.amplitude_lut, self.intensity_lut = lut_builder.table(self.linewidth)
 
   def _reshape_source(self):
     scale = float(self.num_strips) / self.source_height
@@ -42,52 +49,40 @@ class Plotter(object):
     """
     return np.power(image / 255, 2.2)
 
-  def draw(self):
-    reshaped_image = self._reshape_source()
-    num_rows, width = reshaped_image.shape
-    y_centers = self._strip_center_y()
-    x = np.linspace(0, width - 1, width)
-    #intensity_image = self._fast_gamma(reshaped_image)
-    intensity_image = reshaped_image / 255 # when amplitude ~intensity, this "version" looks better
-    for i in range(num_rows):
-      amplitude = self.strip_height * 0.5 * intensity_image[i, :]
-      plt.plot(x, amplitude * np.sin(self.frequency * x) + y_centers[i], color='black')
-    plt.axis('off')
-    plt.gca().invert_yaxis()  # like axis(ij)
-    plt.show()
-    # to save out, don't show the plot. also, may need to resize it? or use linewidth=...
-#    plt.savefig("foo.png", bbox_inches='tight', dpi=200)
-
   def draw_opencv(self):
     reshaped_image = self._reshape_source()
-    num_rows, width = reshaped_image.shape
+    phase = np.linspace(0, 2*np.pi, self.num_channels + 1)
+    sine_image = np.zeros(self.source_image.shape, dtype='uint8')
+    for ch in range(self.num_channels):
+      sine_image[:, :, ch] = self.draw_opencv_one_channel(reshaped_image[:,:,ch], phase[ch]);
+    return sine_image
+
+  def draw_opencv_one_channel(self, source_image, phase_offset):
+    num_rows, width = source_image.shape[:2]
     y_centers = self._strip_center_y()
     x = np.linspace(0, width - 1, width)
-    intensity_image = self._fast_gamma(reshaped_image)
-    map_builder = SineToIntensityMapBuilder(self.strip_height, self.frequency)
-    map_size = np.floor(0.5 * self.strip_height)
-    linewidth = 1
-    amplitude_map, intensity_map = map_builder.map(map_size, linewidth)
-    scaled_intensity_image = intensity_image * np.max(intensity_map)
-    amplitude_image = np.reshape(np.interp(np.ravel(scaled_intensity_image), intensity_map, amplitude_map), intensity_image.shape)
+    intensity_image = self._fast_gamma(source_image)
+    scaled_intensity_image = intensity_image * np.max(self.intensity_lut)
+    amplitude_image = np.reshape(np.interp(np.ravel(scaled_intensity_image), self.intensity_lut, self.amplitude_lut), intensity_image.shape)
     sine_image = np.zeros((self.source_height, self.source_width), dtype='uint8')
     for i in range(num_rows):
-      y = amplitude_image[i, :] * np.sin(self.frequency * x) + y_centers[i]
-      sine_image = plot_to_opencv(sine_image, x, y, 255, linewidth)
+      y = amplitude_image[i, :] * np.sin(self.frequency * x + phase_offset) + y_centers[i]
+      sine_image = plot_to_opencv(sine_image, x, y, 255, self.linewidth)
     plt.imshow(sine_image, cmap='Greys_r')
     plt.show()
     return sine_image
 
-class SineToIntensityMapBuilder(object):
+class SineIntensityLutBuilder(object):
   def __init__(self, strip_height, frequency):
     self.strip_height = strip_height
-    self.max_amplitude = 0.5 * self.strip_height
+    self.max_amplitude = np.floor(0.5 * self.strip_height)
+    self.lut_size = self.max_amplitude + 1
     self.omega = frequency
     self.period = 2 * np.pi / frequency
 
-  def map(self, num_levels, linewidth):
+  def table(self, linewidth):
     """
-    Creates a map of amplitude vs intensity.
+    Creates a look-up table of amplitude vs intensity.
     """
     num_cycles = 5  # number of cycles to plot (to limit edge effects)
     bkg = np.zeros((int(self.strip_height), round(self.period * num_cycles)), dtype='uint8')
@@ -95,7 +90,7 @@ class SineToIntensityMapBuilder(object):
     # maximum intensity occurs when all pixels in the intenstiy map of the
     # plotted image have a value of 1.
     max_total_intensity = bkg.shape[0] * bkg.shape[1]
-    amplitudes = np.linspace(0, self.max_amplitude, num_levels)
+    amplitudes = np.linspace(0, self.max_amplitude, self.lut_size)
     width = bkg.shape[1]
     x = np.linspace(0, width - 1, width)
     intensity = np.zeros(amplitudes.shape)
