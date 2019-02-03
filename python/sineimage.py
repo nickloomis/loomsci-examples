@@ -49,6 +49,8 @@ class Plotter(object):
     # maximum possible intensity LUT value (eg, contrast-stretching).
     # Better: contrast-stretch using the nth percentile instead of the overall
     # max to avoid outliers and get a /bit/ more brightness.
+    # Note: contrast scaling is only necessary if the map's intensity is higher
+    # than the lut's intensity.
     scaled_intensity_map = intensity_map / np.max(intensity_map) * self.amplitude_lut.maximum_intensity()
     return self.amplitude_lut.apply(scaled_intensity_map)
     
@@ -130,11 +132,11 @@ class SineIntensityLut(object):
 #                number of cycles across the image, for example
 # TODO(nloomis): option to set low_res_width using a different scale -- eg,
 #                preserve more lateral detail
-# TODO(nloomis): amplitude so that sine's coverage has about the right intensity on average over the region
-# TODO(nloomis): options for RGB plots, with phase offsets in the sines between each color
 # TODO(nloomis): options for line width
 # TODO(nloomis): limit the maximum amplitude to be some fraction of the strip height
 #                for a better appearance
+# TODO(nloomis): allow line-drawing color to vary for parts of the image darker
+#                than allowed by a LUT with a line color of 255
 
 def plot_to_opencv(img, x, y, color, linewidth):
   cv_points = [np.int32(np.vstack((x, y)).T)]
