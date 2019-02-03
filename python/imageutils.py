@@ -313,3 +313,17 @@ def stdfilt(img, structuring_element):
 
 # TODO(nloomis): check on correlate vs convolve (arguments, and which makes
 #                sense)
+
+def contrast_stretch(img, low_percentile, high_percentile, low_target, high_target):
+    """Returns a contrast-stretched image.
+
+    An image is linearly stretched so that percentile(img, low_percentile)
+    matches low_target in the output, and percentile(img, high_percentile)
+    matches high_target. Use low_percentile=0 to stretch to the absolue minimum
+    of the input image and high_percentile=100 for the absolute maximum.
+    """
+    img_low_value = numpy.percentile(numpy.ravel(img), low_percentile)
+    img_high_value = numpy.percentile(numpy.ravel(img), high_percentile)
+    img_range = img_high_value - img_low_value
+    target_range = high_target - low_target
+    return (img - img_low_value) / img_range * target_range + low_target
