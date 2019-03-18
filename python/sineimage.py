@@ -1,9 +1,15 @@
 """
 TODO(nloomis): describe package
 
+Inspired by the following sources:
+https://www.evilmadscientist.com/2016/axidraw-v3/
+https://github.com/gwygonik/SquiggleDraw
+
 Change log:
   2019/01/19 -- module started; nloomis@gmail.com
   2019/01/27 -- opencv amplitude-intensity lookup finished; nloomis@gmail.com
+  2019/02/04 -- reorganized variables so that more could be changed on-the-fly
+                without rebuilding the Plotter; nloomis@gmail.com
 """
 __authors__ = ('nloomis@gmail.com',)
 
@@ -16,43 +22,45 @@ import numpy as np
 import scipy.special as special
 
 class Plotter(object):
-  def __init__(self, source_image, num_strips):
-    #self.source_image = cv2utils.imread(filename, cv2.IMREAD_GRAYSCALE)
-    # TODO(nloomis): hide internal variables
-    self.source_image = source_image
-    self.source_height, self.source_width = self.source_image.shape[:2]
-    self.num_channels = imageutils.nchannels(self.source_image)
-    self.num_strips = int(num_strips)
-    self.strip_height = self.source_height / self.num_strips
-    self.frequency = 0.65 # spatial frequency of sine; fixed for now
-    self.linewidth = 1
-    # TODO(nloomis): better name for the lut
-    self.amplitude_lut = SineIntensityLut(self.strip_height, self.frequency, self.linewidth)
+  def __init__(self, source_image, num_strips, num_cycles, linewidth=1):
+    self._source_image = source_image
+    self._source_height, self._source_width = self._source_image.shape[:2]
+    self._num_channels = imageutils.nchannels(self._source_image)
+    self._num_strips = int(num_strips)
+    self._strip_height = self._source_height / self._num_strips
+    # the following properties can be changed at any time.
+    self.num_cycles = num_cycles
+    self.linewidth = linewidth
+    self.contrast_percentiles = (2, 98)
+    # width_detail: the amount of detail in the x-direction relative to the
+    # detail in the y (strip height) direction
+    self.width_detail = 2
+
+  def _spatial_frequency(self):
+    return 2 * np.pi * self.num_cycles / (self._source_width)
+
+  def amplitude_map(self):
+    """Returns the sine wave's amplitudes as a 2d map."""
+    reshaped_image = self._reshape_source()
+    return self._amplitude_lut(reshaped_image)
 
   def _reshape_source(self):
-    scale = float(self.num_strips) / self.source_height
-    low_res_width = scale * self.source_width
-    low_res_image = cv2.resize(self.source_image, (int(low_res_width), self.num_strips), interpolation=cv2.INTER_AREA);
-    reshaped_image = cv2.resize(low_res_image, (self.source_width, self.num_strips), interpolation=cv2.INTER_CUBIC);
+    scale = float(self._num_strips) / self._source_height
+    low_res_width = scale * self._source_width * self.width_detail
+    low_res_image = cv2.resize(self._source_image, (int(low_res_width), self._num_strips), interpolation=cv2.INTER_AREA);
+    reshaped_image = cv2.resize(low_res_image, (self._source_width, self._num_strips), interpolation=cv2.INTER_CUBIC);
     return reshaped_image
 
-  def _amplitude_map(self, source_image):
+  def _amplitude_lut(self, source_image):
     """
     Calculates the amplitude of the sine waves needed to reproduce the provided
-    source image.
+    source image using a look-up table.
     """
-    intensity_map = self._fast_gamma(source_image)
-    # Scale the intensity map so that the maximum possible map value (1)
-    # corresponds to the maximum possible intensity LUT value.
-#    scaled_intensity_map = intensity_map * self.amplitude_lut.maximum_intensity()
-    # Scale the intensity map so that its maximum value corresponds to the
-    # maximum possible intensity LUT value (eg, contrast-stretching).
-    # Better: contrast-stretch using the nth percentile instead of the overall
-    # max to avoid outliers and get a /bit/ more brightness.
-    # Note: contrast scaling is only necessary if the map's intensity is higher
-    # than the lut's intensity.
-    scaled_intensity_map = intensity_map / np.max(intensity_map) * self.amplitude_lut.maximum_intensity()
-    return self.amplitude_lut.apply(scaled_intensity_map)
+    #intensity_map = self._fast_gamma(source_image)
+    intensity_map = source_image/255.0
+    lut = SineIntensityLut(self._strip_height, self._spatial_frequency(), self.linewidth)
+    scaled_intensity_map = imageutils.contrast_stretch(intensity_map, self.contrast_percentiles[0], self.contrast_percentiles[1], 0.0, lut.maximum_intensity())
+    return lut.apply(scaled_intensity_map)
     
   @classmethod
   def _fast_gamma(cls, image):
@@ -65,11 +73,10 @@ class Plotter(object):
     return np.power(image / 255, 2.2)
 
   def draw(self):
-    reshaped_image = self._reshape_source()
-    amplitude_map = self._amplitude_map(reshaped_image)
-    phase = np.linspace(0, 2*np.pi, self.num_channels + 1)
-    sine_image = np.zeros(self.source_image.shape, dtype='uint8')
-    for ch in range(self.num_channels):
+    amplitude_map = self.amplitude_map()
+    phase = np.linspace(0, 2*np.pi, self._num_channels + 1)
+    sine_image = np.zeros(self._source_image.shape, dtype='uint8')
+    for ch in range(self._num_channels):
       sine_image[:, :, ch] = self._draw_opencv_one_channel(amplitude_map[:,:,ch], phase[ch]);
     return sine_image
 
@@ -77,16 +84,14 @@ class Plotter(object):
     num_rows, width = amplitude_map.shape[:2]
     y_centers = self._strip_center_y()
     x = np.linspace(0, width - 1, width)
-    sine_image = np.zeros((self.source_height, self.source_width), dtype='uint8')
+    sine_image = np.zeros((self._source_height, self._source_width), dtype='uint8')
     for i in range(num_rows):
-      y = amplitude_map[i, :] * np.sin(self.frequency * x + phase_offset) + y_centers[i]
+      y = amplitude_map[i, :] * np.sin(self._spatial_frequency() * x + phase_offset) + y_centers[i]
       sine_image = plot_to_opencv(sine_image, x, y, 255, self.linewidth)
-    plt.imshow(sine_image, cmap='Greys_r')
-    plt.show()
     return sine_image
 
   def _strip_center_y(self):
-    return np.linspace(0.5 * self.strip_height, (self.num_strips - 0.5) * self.strip_height, self.num_strips)
+    return np.linspace(0.5 * self._strip_height, (self._num_strips - 0.5) * self._strip_height, self._num_strips)
 
 
 class SineIntensityLut(object):
@@ -123,6 +128,7 @@ class SineIntensityLut(object):
       y = self.strip_height * 0.5 + a * np.sin(self.omega * x)
       plotted_image = plot_to_opencv(bkg, x, y, 255, linewidth)
       intensity_image = Plotter._fast_gamma(plotted_image)
+      #intensity_image = plotted_image
       intensity[i] = np.sum(intensity_image[:]) / max_total_intensity
     return amplitudes, intensity
 
