@@ -3,9 +3,11 @@
 Utility functions for interfacing with cv2 library.
 
 Change log:
-  2010/08/16 -- module started; nloomis@gmail.com
-  2010/10/10 -- copied generic tools out to imageutils.py, so that only the
+  2015/08/16 -- module started; nloomis@gmail.com
+  2015/10/10 -- copied generic tools out to imageutils.py, so that only the
                 code specific to cv2 is in this module; nloomis@
+  2019/06/13 -- added imwrite for convenience; added imshow; nloomis@
+  2019/06/14 -- added resize using a scaling factor; nloomis@
 """
 __authors__ = {'nloomis@gmail.com'}
 
@@ -46,6 +48,13 @@ def imread(filename, read_mode=cv2.IMREAD_COLOR):
             img = imread(filename, cv2.IMREAD_UNCHANGED)
     return img
 
+def imwrite(img_data, filename):
+    """Writes an image to disk using cv2.
+
+    Convenience function, included in the module so that both imread + imwrite
+    are in contained in the same import. Uses the same argument order as Matlab.
+    """
+    cv2.imwrite(filename, img_data)
 
 def flip_channels_cv2(img):
     """Changes from BGR<->RGB, flipping the order of color channels.
@@ -56,3 +65,22 @@ def flip_channels_cv2(img):
     """
     return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
+def imshow(img):
+    # TODO[NL]: make this into a class, get a GUID for the figure name or
+    # reflect the argument.
+    cv2.imshow('image', img)
+    keypress = cv2.waitKey(0) & 0xFF
+    if keypress == ESC or keypress == ord('q'):
+        cv2.destroyAllWindows()
+    # Ideally: add a listener for the window's close button.
+
+def resize(img, scale):
+    """Resizes an image using a fixed scaling factor."""
+    initial_height, initial_width = img.shape[:2]
+    final_height = int(initial_height * scale)
+    final_width = int(initial_width * scale)
+    if scale > 1:
+        method = cv2.INTER_CUBIC
+    else:
+        method = cv2.INTER_AREA
+    return cv2.resize(img, (final_width, final_height), method)
