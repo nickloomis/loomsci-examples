@@ -1,11 +1,14 @@
 """
-TODO(nloomis): describe package
+Draws an image using a set of horizontal sinusoids with varying amplitude.
 
 Change log:
   2019/01/19 -- module started; nloomis@gmail.com
   2019/01/27 -- opencv amplitude-intensity lookup finished; nloomis@gmail.com
   2019/06/14 -- contrast stretching working; white or black background;
                 nloomis@gmail.com
+  2019/06/16 -- fixed number of periods across the width; wait to compute
+                lut until draw() for better flexibility to change parameters
+                without constructing a new object; nloomis@
 """
 __authors__ = ('nloomis@gmail.com',)
 
@@ -21,26 +24,49 @@ import numpy as np
 #  cv2utils.imwrite(f, 'foo-squiggle.jpg')
 
 class Plotter(object):
-  def __init__(self, source_image, num_strips):
-    #self.source_image = cv2utils.imread(filename, cv2.IMREAD_GRAYSCALE)
-    # TODO(nloomis): hide internal variables
-    self.source_image = source_image
-    self.num_strips = int(num_strips)
-    self.source_height, self.source_width = self.source_image.shape[:2]
-    self.num_channels = imageutils.nchannels(self.source_image)
-    self.strip_height = self.source_height / self.num_strips
-    self.frequency = 0.65 # spatial frequency of sine; fixed for now
+  def __init__(self, source_image, num_strips=40):
+    self._source_image = source_image
+
+    # Derived attributes
+    self._source_height, self._source_width = self._source_image.shape[:2]
+    self._num_channels = imageutils.nchannels(self._source_image)
+
+    # Independent Parameters
+    self.num_strips = num_strips
+    self.num_periods = 95;
     self.linewidth = 2
     # Percentile of peak/shadow to over/under expose
     self.constrast_stretch_percentile = 10
-    # Set background to be black (0) or white (255)
+    # Set background to be black (0), white (255), or somewhere in between
     self.background_color = 255
+    # Set the line color to be either fully dark (0), fully bright (255), or
+    # somewhere in between
+    self.line_color = 0
+
+  @property
+  def num_strips(self):
+    return self._num_strips
+  
+  @num_strips.setter
+  def num_strips(self, num_strips):
+    self._num_strips = int(num_strips)
+
+  @property
+  def _frequency(self):
+    """Returns the spatial frequency of the sine, sin(w*x)."""
+    period = self._source_width / self.num_periods
+    return 2 * np.pi / period
+
+  @property
+  def _strip_height(self):
+    """Returns the height in pixels of each pixel strip used to draw a sine."""
+    return self._source_height / self.num_strips  
 
   def _reshape_source(self):
-    scale = float(self.num_strips) / self.source_height
-    low_res_width = scale * self.source_width
-    low_res_image = cv2.resize(self.source_image, (int(low_res_width), self.num_strips), interpolation=cv2.INTER_AREA);
-    reshaped_image = cv2.resize(low_res_image, (self.source_width, self.num_strips), interpolation=cv2.INTER_CUBIC);
+    scale = float(self.num_strips) / self._source_height
+    low_res_width = scale * self._source_width
+    low_res_image = cv2.resize(self._source_image, (int(low_res_width), self.num_strips), interpolation=cv2.INTER_AREA);
+    reshaped_image = cv2.resize(low_res_image, (self._source_width, self.num_strips), interpolation=cv2.INTER_CUBIC);
     return reshaped_image
 
   def _amplitude_map(self, source_image):
@@ -51,7 +77,7 @@ class Plotter(object):
     intensity_map = self._fast_gamma(source_image)
 
     # Build the look-up table for intensity-to-sine-amplitude.
-    amplitude_lut = SineIntensityLut(self.strip_height, self.frequency, self.linewidth, self.background_color)
+    amplitude_lut = SineIntensityLut(self._strip_height, self._frequency, self.linewidth, self.background_color, self.line_color)
 
     high_pctl = 100 - self.constrast_stretch_percentile
     scaled_intensity_map = imageutils.contrast_stretch(intensity_map, self.constrast_stretch_percentile, high_pctl, amplitude_lut.minimum_intensity(), amplitude_lut.maximum_intensity())
@@ -70,9 +96,9 @@ class Plotter(object):
   def draw(self):
     reshaped_image = self._reshape_source()
     amplitude_map = self._amplitude_map(reshaped_image)
-    phase = np.linspace(0, 2*np.pi, self.num_channels + 1)
-    sine_image = np.zeros(self.source_image.shape, dtype='uint8')
-    for ch in range(self.num_channels):
+    phase = np.linspace(0, 2*np.pi, self._num_channels + 1)
+    sine_image = np.zeros(self._source_image.shape, dtype='uint8')
+    for ch in range(self._num_channels):
       sine_image[:, :, ch] = self._draw_opencv_one_channel(amplitude_map[:,:,ch], phase[ch]);
     return sine_image
 
@@ -80,22 +106,24 @@ class Plotter(object):
     num_rows, width = amplitude_map.shape[:2]
     y_centers = self._strip_center_y()
     x = np.linspace(0, width - 1, width)
-    line_color = 255 - self.background_color
-    sine_image = np.full((self.source_height, self.source_width), self.background_color, dtype='uint8')
+    sine_image = np.full((self._source_height, self._source_width), self.background_color, dtype='uint8')
     for i in range(num_rows):
-      y = amplitude_map[i, :] * np.sin(self.frequency * x + phase_offset) + y_centers[i]
-      sine_image = plot_to_opencv(sine_image, x, y, line_color, self.linewidth)
+      y = amplitude_map[i, :] * np.sin(self._frequency * x + phase_offset) + y_centers[i]
+      sine_image = plot_to_opencv(sine_image, x, y, self.line_color, self.linewidth)
     return sine_image
 
   def _strip_center_y(self):
-    return np.linspace(0.5 * self.strip_height, (self.num_strips - 0.5) * self.strip_height, self.num_strips)
+    return np.linspace(0.5 * self._strip_height, (self.num_strips - 0.5) * self._strip_height, self.num_strips)
 
 
+# Look-up table for the amplitude of a sine wave needed to produce a particular
+# intensity.
 class SineIntensityLut(object):
-  def __init__(self, strip_height, frequency, linewidth, background_color):
+  def __init__(self, strip_height, frequency, linewidth, background_color, line_color):
     self.strip_height = strip_height
     self.omega = frequency
     self.background_color = background_color
+    self.line_color = line_color
     # Derived attributes
     self.max_amplitude = np.floor(0.5 * self.strip_height)
     self.lut_size = self.max_amplitude + 1
@@ -122,12 +150,9 @@ class SineIntensityLut(object):
     return np.max(self.intensity_lut)
 
   def _build_table(self, linewidth):
-    """
-    Creates a look-up table of amplitude vs intensity.
-    """
+    """Creates a look-up table of amplitude vs intensity."""
     num_cycles = 5  # number of cycles to plot; >>1 to limit edge effects
     bkg = np.full((int(self.strip_height), round(self.period * num_cycles)), self.background_color, dtype='uint8')
-    line_color = 255 - self.background_color
     # The intensity (linear RGB) is scaled to [0, 1] for this module. The
     # maximum intensity occurs when all pixels in the intenstiy map of the
     # plotted image have a value of 1.
@@ -138,24 +163,22 @@ class SineIntensityLut(object):
     intensity = np.zeros(amplitudes.shape)
     for i, a in enumerate(amplitudes):
       y = self.strip_height * 0.5 + a * np.sin(self.omega * x)
-      plotted_image = plot_to_opencv(bkg, x, y, line_color, linewidth)
+      plotted_image = plot_to_opencv(bkg, x, y, self.line_color, linewidth)
       intensity_image = Plotter._fast_gamma(plotted_image)
       intensity[i] = np.sum(intensity_image[:]) / max_total_intensity
     return amplitudes, intensity
 
-# TODO(nloomis): options for diff't color scheme (dark on bright, bright on dark)
-# TODO(nloomis): modify the frequency, either as an option or f(intensity) or f(image detail)
-# TODO(nloomis): scale the frequency as a function of the image size; some fixed
-#                number of cycles across the image, for example
-# TODO(nloomis): option to set low_res_width using a different scale -- eg,
-#                preserve more lateral detail
-# TODO(nloomis): options for line width
-# TODO(nloomis): limit the maximum amplitude to be some fraction of the strip height
-#                for a better appearance
-# TODO(nloomis): allow line-drawing color to vary for parts of the image darker
-#                than allowed by a LUT with a line color of 255
-
 def plot_to_opencv(img, x, y, color, linewidth):
+  """Uses OpenCV to plot a set of connected (x,y) points."""
   cv_points = [np.int32(np.vstack((x, y)).T)]
   cv2.polylines(img, cv_points, False, color, int(linewidth), cv2.LINE_AA)
   return img
+
+# TODO(nloomis): modify the frequency, either as an option or f(intensity) or f(image detail)
+# TODO(nloomis): option to set low_res_width using a different scale -- eg,
+#                preserve more lateral detail
+# TODO(nloomis): limit the maximum amplitude to be some fraction of the strip height
+#                for a better appearance
+# TODO(nloomis): allow line-drawing color to vary if amplitude=0 is a significant
+#                approximation error
+
