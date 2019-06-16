@@ -20,6 +20,7 @@ Change log:
   2016/01/18 -- self-inspection added to find demo_* functions; nloomis@
   2016/??    -- digitalholography, steerablederiv, ledecky_wr added; nloomis@
   2016/10/08 -- camera MPx demo added; nloomis@
+  2019/06/15 -- sineimage demo added; python3 updates; nloomis@
 """
 __authors__ = ('nloomis@gmail.com',)
 
@@ -58,6 +59,17 @@ def demo_camera_sbp():
     import cameraresolution
     cameraresolution.PlotCameraSbpVsK()
 
+def demo_sineimage():
+    import cv2utils
+    import imageutils
+    import sineimage
+    img = imageutils.test_image('chicago-small.png')
+    num_strips = 35
+    S = sineimage.Plotter(img, num_strips)
+    squiggle_img = S.draw()
+    # NB: 'q' or 'esc' to close the image.
+    cv2utils.imshow(squiggle_img)
+
 #
 # functions to run different demos
 #
@@ -67,21 +79,21 @@ def _find_demos():
     # Example borrowed from
     #https://bytes.com/topic/python/answers/25264-list-all-functions-defined-current-module
     self_reference = __import__(inspect.getmodulename(__file__))
-    demo_funcs = {k: v for k, v in self_reference.__dict__.items() 
-                  if isinstance(k, basestring) and k.startswith('demo_')}
+    demo_funcs = {k: v for k, v in self_reference.__dict__.items()
+                  if isinstance(k, str) and k.startswith('demo_')}
     #TODO(nloomis): remember to check also that it's a function! import types.
     return demo_funcs
 
 def demo_test():
     """Simple test demo to make sure inspection works."""
-    print "Demo tester: works!"
+    print("Demo tester: works!")
 
 def _print_demo_names(demo_funcs_dict):
     """Print a list of available demo names. Uses the short name form."""
-    print "There are %d demos available:" % len(demo_funcs_dict)
+    print("There are %d demos available:" % len(demo_funcs_dict))
     for long_name in demo_funcs_dict.keys():
         short_name = long_name[5:]
-        print "  %s" % short_name
+        print("  %s" % short_name)
 
 def run_demo(demo_name=None):
     """Runs a specific demo, or else lists the available demos.
@@ -98,9 +110,9 @@ def run_demo(demo_name=None):
         return
     if not demo_name.startswith('demo_'):
         demo_name = 'demo_' + demo_name
-    if not demo_funcs_dict.has_key(demo_name):
-        print "The function %s can't be found!" % demo_name
-        _print_demo_names(demo_funcs)
+    if not demo_name in demo_funcs_dict:
+        print("The function %s can't be found!" % demo_name)
+        _print_demo_names(demo_funcs_dict)
         return
     demo_funcs_dict[demo_name]()
 

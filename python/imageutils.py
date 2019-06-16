@@ -78,7 +78,7 @@ def test_image(image_name=None):
         print('Available images are: %s' % available_images)
         return None
     #find the matching image names
-    assert(isinstance(image_name, basestring))
+    assert(isinstance(image_name, str))
     matches = [file_name for file_name in available_images
                if file_name.startswith(image_name)]
     if len(matches) == 0:
